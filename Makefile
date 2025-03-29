@@ -1,8 +1,10 @@
-.PHONEY: all clean
+.PHONEY: all clean install uninstall
 
 PROG=parrot
-CC=gcc
+CC?=gcc
 CFLAGS=-O2 -std=c11 -Wall
+PREFIX?=/usr/local
+BINDIR=$(PREFIX)/bin
 SRC=main.c
 OBJ=$(SRC:.c=.o)
 
@@ -17,3 +19,10 @@ $(PROG): $(OBJ)
 clean:
 	rm -f $(OBJ)
 	rm -f $(PROG)
+
+install:
+	mkdir -p $(BINDIR)
+	cp $(PROG) $(BINDIR)
+
+uninstall:
+	rm -f $(BINDIR)/$(PROG)

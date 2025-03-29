@@ -1,4 +1,5 @@
 #include <getopt.h>
+#include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,8 +43,18 @@ static const char* PARROT =
 "        [48;5;16m  [48;5;75m▄                   [48;5;233m[38;5;75m▄[48;5;16m▄ [49m[38;5;16m▄\n"
 "        [48;5;16m [48;5;75m [48;5;16m[38;5;75m▄ [48;5;75m[38;5;16m▄▄▄▄                 [48;5;16m[38;5;75m▄▄ [49m[38;5;16m▄\n"
 "        [48;5;16m [48;5;75m     [48;5;16m[38;5;75m▄▄▄▄[48;5;75m                  [48;5;232m▄[48;5;16m▄ [49m\n"
-"        [38;5;16m▀[38;5;232m▀▀▀[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\n"
-"        [39m\n";
+"        [38;5;16m▀[38;5;232m▀▀▀[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀[39m\n";
+
+static int u8strlen(const char *s)
+{
+  int len=0;
+
+  for (; *s; s++) {
+    len += ((*s & 0xC0) != 0x80);
+  }
+
+  return len;
+}
 
 static inline int max(int lhs, int rhs)
 {
@@ -64,7 +75,7 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
     if (*p == '\n') {
       *p = '\0';
       lines[count++] = line_start;
-      max_line = max(max_line, strlen(line_start));
+      max_line = max(max_line, u8strlen(line_start));
       line_start = p + 1;
     }
 
@@ -75,7 +86,7 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
     if (p - line_start > width && last_space) {
       *last_space = '\0';
       lines[count++] = line_start;
-      max_line = max(max_line, strlen(line_start));
+      max_line = max(max_line, u8strlen(line_start));
       line_start = last_space + 1;
       last_space = 0;
     }
@@ -88,7 +99,7 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
 
   if (p > line_start) {
     lines[count++] = line_start;
-    max_line = max(max_line, strlen(line_start));
+    max_line = max(max_line, u8strlen(line_start));
   }
 
   *longest_line = max_line;
@@ -124,7 +135,7 @@ static int print_balloon(char** lines, unsigned int line_count, unsigned int max
       surrounds = SURROUNDS[3];
     }
 
-    repeat(buffer, ' ', max_len - strlen(line));
+    repeat(buffer, ' ', max_len - u8strlen(line));
     printf("%c %s%s %c\n", surrounds[0], line, buffer, surrounds[1]);
   }
 
@@ -198,7 +209,7 @@ static int parrot(unsigned int width)
   if (lines == NULL) {
     return EXIT_FAILURE;
   }
-  
+
   if (print_balloon(lines, line_count, longest_line) < 0) {
     return EXIT_FAILURE;
   }
@@ -207,12 +218,17 @@ static int parrot(unsigned int width)
 
   free(lines);
   free(text);
-  
+
   return EXIT_SUCCESS; 
 }
 
 int main(int argc, char** argv)
 {
+  if (setlocale(LC_ALL, "") == NULL) {
+    fprintf(stderr, "Failed to set locale\n");
+    return EXIT_FAILURE;
+  }
+
   int width = DEFAULT_WIDTH;
   char opt;
 
