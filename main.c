@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* Pull in external getopt globals */
 extern char* optarg;
@@ -19,6 +20,8 @@ static const char* USAGE = "Usage: parrot [OPTION]...\n"
 "   -v  Print version and exit\n"
 "   -h  Show this message and exit\n";
 
+const char* MEMORY_ALLOC_MSG = "Failed to allocate memory";
+
 static const int DEFAULT_WIDTH = 40;
 static const int TABSHIFT = 8;
 
@@ -29,20 +32,22 @@ static const char SURROUNDS[][2] = {
   {'\\', '/'}
 };
 
+const int PADDING = 2;
+
 static const char* PARROT =
 "       \\\x1b[49m\n"
 "        \\     \x1b[38;5;16m▄▄▄\x1b[38;5;232m▄\x1b[38;5;16m▄▄▄▄\n"
-"         \\  ▄\x1b[48;5;16m \x1b[38;5;75m▄\x1b[48;5;75m      \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
-"          ▄\x1b[48;5;16m \x1b[38;5;75m▄\x1b[48;5;75m           \x1b[48;5;16m \x1b[49m\x1b[38;5;16m▄\n"
-"         \x1b[48;5;16m \x1b[38;5;75m▄\x1b[48;5;75m   \x1b[48;5;16m \x1b[48;5;75m  \x1b[38;5;232m▄\x1b[48;5;16m\x1b[38;5;132m▄▄▄\x1b[48;5;75m\x1b[38;5;16m▄ \x1b[48;5;16m \x1b[48;5;75m \x1b[48;5;16m \x1b[49m\n"
-"        \x1b[48;5;16m \x1b[38;5;75m▄\x1b[48;5;75m      \x1b[48;5;16m \x1b[48;5;132m     \x1b[48;5;16m \x1b[48;5;75m  \x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
-"       \x1b[48;5;16m \x1b[38;5;75m▄\x1b[48;5;75m       \x1b[48;5;16m \x1b[48;5;132m     \x1b[48;5;16m \x1b[48;5;75m    \x1b[48;5;16m \x1b[49m\n"
-"       \x1b[48;5;16m \x1b[48;5;75m        \x1b[48;5;16m \x1b[48;5;132m\x1b[38;5;233m▄    \x1b[48;5;16m \x1b[48;5;75m    \x1b[48;5;16m \x1b[49m\n"
-"       \x1b[48;5;16m \x1b[48;5;75m         \x1b[48;5;16m \x1b[48;5;132m\x1b[38;5;232m▄ \x1b[38;5;16m▄\x1b[48;5;16m \x1b[48;5;75m     \x1b[48;5;16m \x1b[49m\n"
-"       \x1b[48;5;16m  \x1b[48;5;75m▄        \x1b[48;5;16m\x1b[38;5;75m▄ ▄\x1b[48;5;75m      \x1b[48;5;16m▄▄ \x1b[49m\x1b[38;5;16m▄\n"
-"        \x1b[48;5;16m  \x1b[48;5;75m▄                   \x1b[48;5;233m\x1b[38;5;75m▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
-"        \x1b[48;5;16m \x1b[48;5;75m \x1b[48;5;16m\x1b[38;5;75m▄ \x1b[48;5;75m\x1b[38;5;16m▄▄▄▄                 \x1b[48;5;16m\x1b[38;5;75m▄▄ \x1b[49m\x1b[38;5;16m▄\n"
-"        \x1b[48;5;16m \x1b[48;5;75m     \x1b[48;5;16m\x1b[38;5;75m▄▄▄▄\x1b[48;5;75m                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
+"         \\  ▄\x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm      \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
+"          ▄\x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm           \x1b[48;5;16m \x1b[49m\x1b[38;5;16m▄\n"
+"         \x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm   \x1b[48;5;16m \x1b[48;5;Cm  \x1b[38;5;232m▄\x1b[48;5;16m\x1b[38;5;132m▄▄▄\x1b[48;5;Cm\x1b[38;5;16m▄ \x1b[48;5;16m \x1b[48;5;Cm \x1b[48;5;16m \x1b[49m\n"
+"        \x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm      \x1b[48;5;16m \x1b[48;5;132m     \x1b[48;5;16m \x1b[48;5;Cm  \x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
+"       \x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm       \x1b[48;5;16m \x1b[48;5;132m     \x1b[48;5;16m \x1b[48;5;Cm    \x1b[48;5;16m \x1b[49m\n"
+"       \x1b[48;5;16m \x1b[48;5;Cm        \x1b[48;5;16m \x1b[48;5;132m\x1b[38;5;233m▄    \x1b[48;5;16m \x1b[48;5;Cm    \x1b[48;5;16m \x1b[49m\n"
+"       \x1b[48;5;16m \x1b[48;5;Cm         \x1b[48;5;16m \x1b[48;5;132m\x1b[38;5;232m▄ \x1b[38;5;16m▄\x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m \x1b[49m\n"
+"       \x1b[48;5;16m  \x1b[48;5;Cm▄        \x1b[48;5;16m\x1b[38;5;Fm▄ ▄\x1b[48;5;Cm      \x1b[48;5;16m▄▄ \x1b[49m\x1b[38;5;16m▄\n"
+"        \x1b[48;5;16m  \x1b[48;5;Cm▄                   \x1b[48;5;233m\x1b[38;5;Fm▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
+"        \x1b[48;5;16m \x1b[48;5;Cm \x1b[48;5;16m\x1b[38;5;Fm▄ \x1b[48;5;Cm\x1b[38;5;16m▄▄▄▄                 \x1b[48;5;16m\x1b[38;5;Fm▄▄ \x1b[49m\x1b[38;5;16m▄\n"
+"        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
 static int u8strlen(const char *s)
@@ -63,13 +68,19 @@ static inline int max(int lhs, int rhs)
 
 static char** wrap_text(char* str, unsigned int width, unsigned int* line_count, unsigned int* longest_line)
 {
-  size_t lines_size = 10;
-  char** lines = malloc(lines_size * sizeof(char*));
   unsigned int count = 0;
   unsigned int max_line = 0;
   char* last_space = 0;
   char* line_start = str;
   char* p;
+
+  size_t lines_size = 10;
+  char** lines = malloc(lines_size * sizeof(char*));
+
+  if (lines == NULL) {
+    perror(MEMORY_ALLOC_MSG);
+    return NULL;
+  }
 
   for (p = str; *p; p++) {
     if (*p == '\n') {
@@ -93,7 +104,15 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
 
     if (count > lines_size) {
       lines_size *= 2;
-      lines = realloc(lines, lines_size * sizeof(char*));
+      char** tmp = realloc(lines, lines_size * sizeof(char*));
+
+      if (tmp == NULL) {
+        perror(MEMORY_ALLOC_MSG);
+        free(lines);
+        return NULL;
+      }
+
+      lines = tmp;
     }
   }
 
@@ -113,14 +132,34 @@ static inline void repeat(char* buf, char c, int times)
   buf[times] = '\0';
 }
 
+static void print_parrot()
+{
+  int c = rand() % 232 + 1;
+  int f = rand() % 232 + 1;
+
+  for (const char* s = PARROT; *s; s++) {
+    switch (*s) {
+      case 'C':
+        printf("%d", c);
+        break;
+      case 'F':
+        printf("%d", f);
+        break;
+      default:
+        putchar(*s);
+    }
+  }
+}
+
 static int print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
 {
-  char* buffer = malloc(max_len * sizeof(char) + 3);
+  char* buffer = malloc(max_len + PADDING + 1);
   if (buffer == NULL) {
+    perror(MEMORY_ALLOC_MSG);
     return -1;
   }
 
-  repeat(buffer, '_', max_len + 2);
+  repeat(buffer, '_', max_len + PADDING);
   printf(" %s \n", buffer);
 
   for (int i = 0; i < line_count; i++) {
@@ -139,7 +178,7 @@ static int print_balloon(char** lines, unsigned int line_count, unsigned int max
     printf("%c %s%s %c\n", surrounds[0], line, buffer, surrounds[1]);
   }
 
-  repeat(buffer, '-', max_len + 2);
+  repeat(buffer, '-', max_len + PADDING);
   printf(" %s \n", buffer);
 
   free(buffer);
@@ -151,6 +190,7 @@ static char* slurp()
   size_t buffer_len = 256;
   char* buffer = malloc(buffer_len);
   if (buffer == NULL) {
+    perror(MEMORY_ALLOC_MSG);
     return NULL;
   }
 
@@ -160,7 +200,15 @@ static char* slurp()
   while ((c = fgetc(stdin)) != EOF) {
     if ((count + TABSHIFT) > buffer_len) {
       buffer_len *= 2;
-      buffer = realloc(buffer, buffer_len);
+      char* tmp = realloc(buffer, buffer_len);
+
+      if (tmp == NULL) {
+        perror(MEMORY_ALLOC_MSG);
+        free(buffer);
+        return NULL;
+      }
+
+      buffer = tmp;
     }
 
     if (c == '\t') {
@@ -198,6 +246,8 @@ static int int_input(const char* in)
 
 static int parrot(unsigned int width)
 {
+  srand(time(NULL));
+
   char* text = slurp();
   if (text == NULL) {
     return EXIT_FAILURE;
@@ -214,7 +264,7 @@ static int parrot(unsigned int width)
     return EXIT_FAILURE;
   }
 
-  printf("%s", PARROT);
+  print_parrot();
 
   free(lines);
   free(text);
