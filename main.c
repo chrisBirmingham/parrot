@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 /* Pull in external getopt globals */
 extern char* optarg;
@@ -33,6 +34,7 @@ static const char SURROUNDS[][2] = {
 };
 
 const int PADDING = 2;
+const int MAX_COLOUR_CODE = 231;
 
 static const char* PARROT =
 "       \\\x1b[49m\n"
@@ -49,6 +51,22 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm \x1b[48;5;16m\x1b[38;5;Fm▄ \x1b[48;5;Cm\x1b[38;5;16m▄▄▄▄                 \x1b[48;5;16m\x1b[38;5;Fm▄▄ \x1b[49m\x1b[38;5;16m▄\n"
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
+
+static int rand_int(int max_int)
+{
+  /**
+   * Attempt to reduce modulo bias in standard C rand
+   * https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator
+   */
+  int r;
+  int range = RAND_MAX - (((RAND_MAX % max_int) + 1) % max_int);
+
+  do {
+    r = rand();
+  } while (r > range);
+
+  return r % max_int + 1;
+}
 
 static unsigned int u8strlen(const char *s)
 {
@@ -126,19 +144,10 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
   return lines;
 }
 
-static inline void repeat(char* buf, char c, int times)
-{
-  if (times > 0) {
-    memset(buf, c, times);
-  }
-
-  buf[times] = '\0';
-}
-
 static void print_parrot()
 {
-  int c = rand() % 231 + 1;
-  int f = rand() % 231 + 1;
+  int c = rand_int(MAX_COLOUR_CODE);
+  int f = rand_int(MAX_COLOUR_CODE);
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
@@ -152,6 +161,15 @@ static void print_parrot()
         putchar(*s);
     }
   }
+}
+
+static inline void repeat(char* buf, char c, int times)
+{
+  if (times > 0) {
+    memset(buf, c, times);
+  }
+
+  buf[times] = '\0';
 }
 
 static int print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
@@ -235,21 +253,38 @@ static char* slurp()
   return buffer;
 }
 
-static int int_input(const char* in)
+static int detect_colour_support()
 {
-  char* err;
-  unsigned long int out = strtoul(in, &err, 10);
+  const char* no_colour = getenv("NO_COLOR");
 
-  if (*err != '\0') {
+  if (no_colour != NULL && no_colour[0] != '\0') {
     return -1;
   }
 
-  return out;
+  const char* colour_term = getenv("COLORTERM");
+
+  if (colour_term != NULL &&
+    (strcmp(colour_term, "truecolor") == 0 || strcmp(colour_term, "24bit") == 0)) {
+      return 0;
+  }
+
+  const char* term = getenv("TERM");
+
+  if (term == NULL || strcmp(term, "dumb") == 0) {
+    return -1;
+  }
+
+  return (strstr(term, "-256color") != NULL || strstr(term, "-truecolor") != NULL);
 }
 
 static int parrot(unsigned int width)
 {
-  srand(time(NULL));
+  if (detect_colour_support() < 0) {
+    fprintf(stderr, "Failed to detect color support or color support disabled\n");
+    return EXIT_FAILURE;
+  }
+
+  srand(time(NULL) + getpid());
 
   char* text = slurp();
   if (text == NULL) {
@@ -273,6 +308,18 @@ static int parrot(unsigned int width)
   free(text);
 
   return EXIT_SUCCESS; 
+}
+
+static int int_input(const char* in)
+{
+  char* err;
+  unsigned long int out = strtoul(in, &err, 10);
+
+  if (*err != '\0') {
+    return -1;
+  }
+
+  return out;
 }
 
 int main(int argc, char** argv)
