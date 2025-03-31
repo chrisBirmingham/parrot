@@ -50,9 +50,9 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
-static int u8strlen(const char *s)
+static unsigned int u8strlen(const char *s)
 {
-  int len=0;
+  unsigned int len = 0;
 
   for (; *s; s++) {
     len += ((*s & 0xC0) != 0x80);
@@ -102,7 +102,7 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
       last_space = 0;
     }
 
-    if (count > lines_size) {
+    if (count == lines_size) {
       lines_size *= 2;
       char** tmp = realloc(lines, lines_size * sizeof(char*));
 
@@ -128,14 +128,17 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
 
 static inline void repeat(char* buf, char c, int times)
 {
-  memset(buf, c, times);
+  if (times > 0) {
+    memset(buf, c, times);
+  }
+
   buf[times] = '\0';
 }
 
 static void print_parrot()
 {
-  int c = rand() % 232 + 1;
-  int f = rand() % 232 + 1;
+  int c = rand() % 231 + 1;
+  int f = rand() % 231 + 1;
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
@@ -198,7 +201,7 @@ static char* slurp()
   int count = 0;
 
   while ((c = fgetc(stdin)) != EOF) {
-    if ((count + TABSHIFT) > buffer_len) {
+    if ((count + TABSHIFT) >= buffer_len) {
       buffer_len *= 2;
       char* tmp = realloc(buffer, buffer_len);
 
