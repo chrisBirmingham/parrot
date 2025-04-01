@@ -52,6 +52,11 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
+struct Line {
+  char* start;
+  unsigned int len;
+};
+
 static int rand_int(int max_int)
 {
   /**
@@ -84,7 +89,17 @@ static inline int max(int lhs, int rhs)
   return (lhs > rhs)? lhs : rhs;
 }
 
-static char** wrap_text(char* str, unsigned int width, unsigned int* line_count, unsigned int* longest_line)
+static inline unsigned int add_line(struct Line* line, char* line_start)
+{
+  unsigned int len = u8strlen(line_start);
+
+  line->start = line_start;
+  line->len = len;
+
+  return len;
+}
+
+static struct Line* wrap_text(char* str, unsigned int width, unsigned int* line_count, unsigned int* longest_line)
 {
   unsigned int count = 0;
   unsigned int max_line = 0;
@@ -93,7 +108,7 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
   char* p;
 
   size_t lines_size = 10;
-  char** lines = malloc(lines_size * sizeof(char*));
+  struct Line* lines = malloc(lines_size * sizeof(struct Line));
 
   if (lines == NULL) {
     perror(MEMORY_ALLOC_MSG);
@@ -103,8 +118,8 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
   for (p = str; *p; p++) {
     if (*p == '\n') {
       *p = '\0';
-      lines[count++] = line_start;
-      max_line = max(max_line, u8strlen(line_start));
+      unsigned int len = add_line(&lines[count++], line_start);
+      max_line = max(max_line, len);
       line_start = p + 1;
     }
 
@@ -114,15 +129,15 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
 
     if (p - line_start > width && last_space) {
       *last_space = '\0';
-      lines[count++] = line_start;
-      max_line = max(max_line, u8strlen(line_start));
+      unsigned int len = add_line(&lines[count++], line_start);
+      max_line = max(max_line, len);
       line_start = last_space + 1;
       last_space = 0;
     }
 
     if (count == lines_size) {
       lines_size *= 2;
-      char** tmp = realloc(lines, lines_size * sizeof(char*));
+      struct Line* tmp = realloc(lines, lines_size * sizeof(struct Line));
 
       if (tmp == NULL) {
         perror(MEMORY_ALLOC_MSG);
@@ -135,8 +150,8 @@ static char** wrap_text(char* str, unsigned int width, unsigned int* line_count,
   }
 
   if (p > line_start) {
-    lines[count++] = line_start;
-    max_line = max(max_line, u8strlen(line_start));
+    unsigned int len = add_line(&lines[count++], line_start);
+    max_line = max(max_line, len);
   }
 
   *longest_line = max_line;
@@ -172,7 +187,7 @@ static inline void repeat(char* buf, char c, int times)
   buf[times] = '\0';
 }
 
-static int print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
+static int print_balloon(struct Line* lines, unsigned int line_count, unsigned int max_len)
 {
   char* buffer = malloc(max_len + PADDING + 1);
   if (buffer == NULL) {
@@ -184,7 +199,7 @@ static int print_balloon(char** lines, unsigned int line_count, unsigned int max
   printf(" %s \n", buffer);
 
   for (int i = 0; i < line_count; i++) {
-    const char* line = lines[i];
+    const struct Line line = lines[i];
     const char* surrounds = SURROUNDS[0];
 
     if (line_count == 1) {
@@ -195,8 +210,8 @@ static int print_balloon(char** lines, unsigned int line_count, unsigned int max
       surrounds = SURROUNDS[3];
     }
 
-    repeat(buffer, ' ', max_len - u8strlen(line));
-    printf("%c %s%s %c\n", surrounds[0], line, buffer, surrounds[1]);
+    repeat(buffer, ' ', max_len - line.len);
+    printf("%c %s%s %c\n", surrounds[0], line.start, buffer, surrounds[1]);
   }
 
   repeat(buffer, '-', max_len + PADDING);
@@ -293,7 +308,7 @@ static int parrot(unsigned int width)
 
   unsigned int line_count;
   unsigned int longest_line;
-  char** lines = wrap_text(text, width, &line_count, &longest_line);
+  struct Line* lines = wrap_text(text, width, &line_count, &longest_line);
   if (lines == NULL) {
     return EXIT_FAILURE;
   }
