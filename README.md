@@ -37,6 +37,7 @@ make install PREFIX=~/.local
 
 ## Inspiration/Attributions
 
+* [parrotsay](https://github.com/matheuss/parrotsay-api) The original inspiration for my project and where I found the parrot terminal art.
 * [Cowsay](https://github.com/tnalpgge/rank-amateur-cowsay)
 * Sirocco and the Cult of the Party Parrot
 * The C implementation of wordwrap found [here](https://rosettacode.org/wiki/Word_wrap) which started as the springboard for my implementation.
