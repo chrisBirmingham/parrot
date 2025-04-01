@@ -9,7 +9,7 @@ The parrot in question is Sirocco, a member of the critically endangered Kākāp
 Parrot accepts one option, `-w`, which configures the width of the text balloon. This is more a suggestion as line breaks occur at spaces and don't
 happen within the middle of words.
 
-[Example of using the parrot program](parrot.png)
+![Example of using the parrot program](parrot.png)
 
 ## Requirements
 
