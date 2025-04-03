@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <getopt.h>
 #include <locale.h>
 #include <stdio.h>
@@ -21,7 +22,7 @@ static const char* USAGE = "Usage: parrot [OPTION]...\n"
 "   -v  Print version and exit\n"
 "   -h  Show this message and exit\n";
 
-const char* MEMORY_ALLOC_MSG = "Failed to allocate memory";
+static const char* MEMORY_ALLOC_MSG = "Failed to allocate memory";
 
 static const int DEFAULT_WIDTH = 40;
 static const int TABSHIFT = 8;
@@ -33,8 +34,8 @@ static const char SURROUNDS[][2] = {
   {'\\', '/'}
 };
 
-const int PADDING = 2;
-const int MAX_COLOUR_CODE = 231;
+static const int PADDING = 2;
+static const int MAX_COLOUR_CODE = 231;
 
 static const char* PARROT =
 "       \\\x1b[49m\n"
@@ -259,8 +260,9 @@ static char* slurp()
     if (c == '\t') {
       memset(buffer + count, ' ', TABSHIFT);
       count += TABSHIFT;
-    } else if (c == '\r') {
-      continue;
+    } else if (iscntrl(c) && c != '\n') {
+      buffer[count++] = '^';
+      buffer[count++] = c ^ 0x40;
     } else {
       buffer[count++] = c;
     }
