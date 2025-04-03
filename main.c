@@ -57,6 +57,19 @@ struct Line {
   unsigned int len;
 };
 
+static void* resize(void* ptr, size_t size)
+{
+  void* tmp = realloc(ptr, size);
+
+  if (tmp == NULL) {
+    perror(MEMORY_ALLOC_MSG);
+    free(ptr);
+    return NULL;
+  }
+
+  return tmp;
+}
+
 static int rand_int(int max_int)
 {
   /**
@@ -99,8 +112,12 @@ static inline unsigned int add_line(struct Line* line, char* line_start)
   return len;
 }
 
-static struct Line* wrap_text(char* str, unsigned int width, unsigned int* line_count, unsigned int* longest_line)
-{
+static struct Line* wrap_text(
+  char* str,
+  unsigned int width,
+  unsigned int* restrict line_count,
+  unsigned int* restrict longest_line
+) {
   unsigned int count = 0;
   unsigned int max_line = 0;
   char* last_space = 0;
@@ -137,15 +154,11 @@ static struct Line* wrap_text(char* str, unsigned int width, unsigned int* line_
 
     if (count == lines_size) {
       lines_size *= 2;
-      struct Line* tmp = realloc(lines, lines_size * sizeof(struct Line));
+      lines = resize(lines, lines_size * sizeof(struct Line));
 
-      if (tmp == NULL) {
-        perror(MEMORY_ALLOC_MSG);
-        free(lines);
+      if (lines == NULL) {
         return NULL;
       }
-
-      lines = tmp;
     }
   }
 
@@ -187,7 +200,7 @@ static inline void repeat(char* buf, char c, int times)
   buf[times] = '\0';
 }
 
-static int print_balloon(struct Line* lines, unsigned int line_count, unsigned int max_len)
+static int print_balloon(const struct Line* lines, unsigned int line_count, unsigned int max_len)
 {
   char* buffer = malloc(max_len + PADDING + 1);
   if (buffer == NULL) {
@@ -236,15 +249,11 @@ static char* slurp()
   while ((c = fgetc(stdin)) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
       buffer_len *= 2;
-      char* tmp = realloc(buffer, buffer_len);
+      buffer = resize(buffer, buffer_len);
 
-      if (tmp == NULL) {
-        perror(MEMORY_ALLOC_MSG);
-        free(buffer);
+      if (buffer == NULL) {
         return NULL;
       }
-
-      buffer = tmp;
     }
 
     if (c == '\t') {
