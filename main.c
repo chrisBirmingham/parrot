@@ -53,11 +53,6 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
-struct Line {
-  char* start;
-  unsigned int len;
-};
-
 static void* resize(void* ptr, size_t size)
 {
   void* tmp = realloc(ptr, size);
@@ -103,17 +98,7 @@ static inline int max(int lhs, int rhs)
   return (lhs > rhs)? lhs : rhs;
 }
 
-static inline unsigned int add_line(struct Line* line, char* line_start)
-{
-  unsigned int len = u8strlen(line_start);
-
-  line->start = line_start;
-  line->len = len;
-
-  return len;
-}
-
-static struct Line* wrap_text(
+static char** wrap_text(
   char* str,
   unsigned int width,
   unsigned int* restrict line_count,
@@ -126,7 +111,7 @@ static struct Line* wrap_text(
   char* p;
 
   size_t lines_size = 10;
-  struct Line* lines = malloc(lines_size * sizeof(struct Line));
+  char** lines = malloc(lines_size * sizeof(char*));
 
   if (lines == NULL) {
     perror(MEMORY_ALLOC_MSG);
@@ -136,8 +121,8 @@ static struct Line* wrap_text(
   for (p = str; *p; p++) {
     if (*p == '\n') {
       *p = '\0';
-      unsigned int len = add_line(&lines[count++], line_start);
-      max_line = max(max_line, len);
+      lines[count++] = line_start;
+      max_line = max(max_line, u8strlen(line_start));
       line_start = p + 1;
     }
 
@@ -147,15 +132,15 @@ static struct Line* wrap_text(
 
     if (p - line_start > width && last_space) {
       *last_space = '\0';
-      unsigned int len = add_line(&lines[count++], line_start);
-      max_line = max(max_line, len);
+      lines[count++] = line_start;
+      max_line = max(max_line, u8strlen(line_start));
       line_start = last_space + 1;
       last_space = 0;
     }
 
     if (count == lines_size) {
       lines_size *= 2;
-      lines = resize(lines, lines_size * sizeof(struct Line));
+      lines = resize(lines, lines_size * sizeof(char*));
 
       if (lines == NULL) {
         return NULL;
@@ -164,8 +149,8 @@ static struct Line* wrap_text(
   }
 
   if (p > line_start) {
-    unsigned int len = add_line(&lines[count++], line_start);
-    max_line = max(max_line, len);
+    lines[count++] = line_start;
+    max_line = max(max_line, u8strlen(line_start));
   }
 
   *longest_line = max_line;
@@ -201,7 +186,7 @@ static inline void repeat(char* buf, char c, int times)
   buf[times] = '\0';
 }
 
-static int print_balloon(const struct Line* lines, unsigned int line_count, unsigned int max_len)
+static int print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
 {
   char* buffer = malloc(max_len + PADDING + 1);
   if (buffer == NULL) {
@@ -213,7 +198,7 @@ static int print_balloon(const struct Line* lines, unsigned int line_count, unsi
   printf(" %s \n", buffer);
 
   for (int i = 0; i < line_count; i++) {
-    const struct Line line = lines[i];
+    const char* line = lines[i];
     const char* surrounds = SURROUNDS[0];
 
     if (line_count == 1) {
@@ -224,8 +209,7 @@ static int print_balloon(const struct Line* lines, unsigned int line_count, unsi
       surrounds = SURROUNDS[3];
     }
 
-    repeat(buffer, ' ', max_len - line.len);
-    printf("%c %s%s %c\n", surrounds[0], line.start, buffer, surrounds[1]);
+    printf("%c %-*s %c\n", surrounds[0], max_len, line, surrounds[1]);
   }
 
   repeat(buffer, '-', max_len + PADDING);
@@ -319,7 +303,7 @@ static int parrot(unsigned int width)
 
   unsigned int line_count;
   unsigned int longest_line;
-  struct Line* lines = wrap_text(text, width, &line_count, &longest_line);
+  char** lines = wrap_text(text, width, &line_count, &longest_line);
   if (lines == NULL) {
     return EXIT_FAILURE;
   }
