@@ -35,7 +35,9 @@ static const char SURROUNDS[][2] = {
 };
 
 static const int PADDING = 2;
-static const int MAX_COLOUR_CODE = 231;
+static const int MAX_COLOUR_CODE = 255;
+static const int GREY_ZERO = 16;
+static const int GREY_THREE = 232;
 
 static const char* PARROT =
 "       \\\x1b[49m\n"
@@ -158,10 +160,21 @@ static char** wrap_text(
   return lines;
 }
 
+static int get_colour()
+{
+  int c = 0;
+
+  do {
+    c = rand_int(MAX_COLOUR_CODE);
+  } while (c == GREY_ZERO || c == GREY_THREE);
+
+  return c;
+}
+
 static void print_parrot()
 {
-  int c = rand_int(MAX_COLOUR_CODE);
-  int f = rand_int(MAX_COLOUR_CODE);
+  int c = get_colour();
+  int f = get_colour();
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
