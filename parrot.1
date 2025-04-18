@@ -8,7 +8,7 @@ Parrot \- A program that parrots back whatever you tell it
 \fBParrot\fP is an imperfect implementation of the cowsay program written in C which prints parrots rather than cows. Parrot reads from stdin and echos the result back to the termainal while wrapped inside a text bubble. A randomly coloured parrot is also printed along with the text.
 .SH OPTIONS
 .TP
-.BR \-w\ W
+.BR \-w\ \fIwidth\fR
 The width of the text bubble. This is more a suggestion as line breaks occur at spaces and don't happen within the middle of words.
 .TP
 .BR \-h
@@ -27,13 +27,21 @@ If defined, this value is checked to see if terminal colour support is enabled. 
 .BR TERM
 Secondary variable checked to see if terminal colour support is enabled. If the value contains the string \fB\-truecolor\fP or \fB\-256color\fP, the check succeeds. If the value is set to \fBdumb\fP, parrot quits with an error exit code.
 .SH EXAMPLES
+.TP
 Usually you'll call parrot, passing in input from a program which generates text, such as \fBfortune\fP
-.IP
+.PP
 .RS
 fortune | parrot
+.RE
+.TP
+For input that would be wrapped to early, you can speficy the width of the balloon like so.
+.PP
+.RS
+figlet "Hello world" | parrot -w 60
 .RE
 .SH AUTHOR
 Parrot was written by Christopher Birmingham
 .SH SEE ALSO
 .BR fortune (6),
-.BR cowsay (6)
+.BR cowsay (6),
+.BR figlet (6)

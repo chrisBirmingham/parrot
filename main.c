@@ -41,8 +41,8 @@ static const int GREY_THREE = 232;
 
 static const char* PARROT =
 "       \\\x1b[49m\n"
-"        \\     \x1b[38;5;16m▄▄▄\x1b[38;5;232m▄\x1b[38;5;16m▄▄▄▄\n"
-"         \\  ▄\x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm      \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
+"        \\     \x1b[38;5;16m▄▄▄\x1b[38;5;232m▄\x1b[38;5;16m▄▄▄▄\x1b[39m\n"
+"         \\  \x1b[38;5;16m▄\x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm      \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
 "          ▄\x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm           \x1b[48;5;16m \x1b[49m\x1b[38;5;16m▄\n"
 "         \x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm   \x1b[48;5;16m \x1b[48;5;Cm  \x1b[38;5;232m▄\x1b[48;5;16m\x1b[38;5;132m▄▄▄\x1b[48;5;Cm\x1b[38;5;16m▄ \x1b[48;5;16m \x1b[48;5;Cm \x1b[48;5;16m \x1b[49m\n"
 "        \x1b[48;5;16m \x1b[38;5;Fm▄\x1b[48;5;Cm      \x1b[48;5;16m \x1b[48;5;132m     \x1b[48;5;16m \x1b[48;5;Cm  \x1b[48;5;16m▄ \x1b[49m\x1b[38;5;16m▄\n"
@@ -55,14 +55,25 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
+static void* allocate(size_t size)
+{
+  void* tmp = malloc(size);
+
+  if (tmp == NULL) {
+    perror(MEMORY_ALLOC_MSG);
+    exit(EXIT_FAILURE);
+  }
+
+  return tmp;
+}
+
 static void* resize(void* ptr, size_t size)
 {
   void* tmp = realloc(ptr, size);
 
   if (tmp == NULL) {
     perror(MEMORY_ALLOC_MSG);
-    free(ptr);
-    return NULL;
+    exit(EXIT_FAILURE);
   }
 
   return tmp;
@@ -113,12 +124,7 @@ static char** wrap_text(
   char* p;
 
   size_t lines_size = 10;
-  char** lines = malloc(lines_size * sizeof(char*));
-
-  if (lines == NULL) {
-    perror(MEMORY_ALLOC_MSG);
-    return NULL;
-  }
+  char** lines = allocate(lines_size * sizeof(char*));
 
   for (p = str; *p; p++) {
     if (*p == '\n') {
@@ -143,10 +149,6 @@ static char** wrap_text(
     if (count == lines_size) {
       lines_size *= 2;
       lines = resize(lines, lines_size * sizeof(char*));
-
-      if (lines == NULL) {
-        return NULL;
-      }
     }
   }
 
@@ -199,13 +201,9 @@ static inline void repeat(char* buf, char c, int times)
   buf[times] = '\0';
 }
 
-static int print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
+static void print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
 {
-  char* buffer = malloc(max_len + PADDING + 1);
-  if (buffer == NULL) {
-    perror(MEMORY_ALLOC_MSG);
-    return -1;
-  }
+  char* buffer = allocate(max_len + PADDING + 1);
 
   repeat(buffer, '_', max_len + PADDING);
   printf(" %s \n", buffer);
@@ -229,17 +227,12 @@ static int print_balloon(char** lines, unsigned int line_count, unsigned int max
   printf(" %s \n", buffer);
 
   free(buffer);
-  return 0;
 }
 
 static char* slurp()
 {
   size_t buffer_len = 256;
-  char* buffer = malloc(buffer_len);
-  if (buffer == NULL) {
-    perror(MEMORY_ALLOC_MSG);
-    return NULL;
-  }
+  char* buffer = allocate(buffer_len);
 
   int c = 0;
   int count = 0;
@@ -248,10 +241,6 @@ static char* slurp()
     if ((count + TABSHIFT) >= buffer_len) {
       buffer_len *= 2;
       buffer = resize(buffer, buffer_len);
-
-      if (buffer == NULL) {
-        return NULL;
-      }
     }
 
     if (c == '\t') {
@@ -310,20 +299,12 @@ static int parrot(unsigned int width)
   srand(time(NULL) + getpid());
 
   char* text = slurp();
-  if (text == NULL) {
-    return EXIT_FAILURE;
-  }
 
   unsigned int line_count;
   unsigned int longest_line;
   char** lines = wrap_text(text, width, &line_count, &longest_line);
-  if (lines == NULL) {
-    return EXIT_FAILURE;
-  }
 
-  if (print_balloon(lines, line_count, longest_line) < 0) {
-    return EXIT_FAILURE;
-  }
+  print_balloon(lines, line_count, longest_line);
 
   print_parrot();
 
