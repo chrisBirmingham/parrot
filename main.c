@@ -300,6 +300,10 @@ static int parrot(unsigned int width)
 
   char* text = slurp();
 
+  if (text == NULL) {
+    return EXIT_FAILURE;
+  }
+
   unsigned int line_count;
   unsigned int longest_line;
   char** lines = wrap_text(text, width, &line_count, &longest_line);
