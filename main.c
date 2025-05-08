@@ -338,7 +338,7 @@ int main(int argc, char** argv)
   }
 
   int width = DEFAULT_WIDTH;
-  char opt;
+  int opt;
 
   opterr = 0; /* Disable getopts default error to stderr */
   while ((opt = getopt(argc, argv, "vhw:")) != -1) {
