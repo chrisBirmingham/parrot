@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <locale.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +27,7 @@ static const char* MEMORY_ALLOC_MSG = "Failed to allocate memory";
 
 static const int DEFAULT_WIDTH = 40;
 static const int TABSHIFT = 8;
+static const float GOLDENISH_RATIO = 1.5;
 
 static const char SURROUNDS[][2] = {
   {'|', '|'},
@@ -95,7 +97,7 @@ static int rand_int(int max_int)
   return r % max_int + 1;
 }
 
-static unsigned int u8strlen(const char *s)
+static unsigned int u8strlen(const char* s)
 {
   unsigned int len = 0;
 
@@ -106,20 +108,28 @@ static unsigned int u8strlen(const char *s)
   return len;
 }
 
-static inline int max(int lhs, int rhs)
-{
-  return (lhs > rhs)? lhs : rhs;
+static void add_line(
+  char** lines,
+  char* line,
+  unsigned int* restrict index,
+  unsigned int* restrict max
+) {
+  lines[(*index)++] = line;
+
+  unsigned int len = u8strlen(line);
+
+  if (len > *max) {
+    *max = len;
+  }
 }
 
 static char** wrap_text(
   char* str,
   unsigned int width,
   unsigned int* restrict line_count,
-  unsigned int* restrict longest_line
+  unsigned int* restrict max_line
 ) {
-  unsigned int count = 0;
-  unsigned int max_line = 0;
-  char* last_space = 0;
+  char* last_space = NULL;
   char* line_start = str;
   char* p;
 
@@ -127,38 +137,29 @@ static char** wrap_text(
   char** lines = allocate(lines_size * sizeof(char*));
 
   for (p = str; *p; p++) {
-    if (*p == '\n') {
-      *p = '\0';
-      lines[count++] = line_start;
-      max_line = max(max_line, u8strlen(line_start));
-      line_start = p + 1;
-    }
-
     if (*p == ' ') {
       last_space = p;
     }
 
-    if (p - line_start > width && last_space) {
-      *last_space = '\0';
-      lines[count++] = line_start;
-      max_line = max(max_line, u8strlen(line_start));
-      line_start = last_space + 1;
-      last_space = 0;
+    bool is_newline = *p == '\n';
+    if (is_newline || (p - line_start > width && last_space)) {
+      char* line_end = is_newline ? p : last_space;
+      *line_end = '\0';
+      add_line(lines, line_start, line_count, max_line);
+      line_start = line_end + 1;
+      last_space = NULL;
     }
 
-    if (count == lines_size) {
-      lines_size *= 2;
+    if (*line_count == lines_size) {
+      lines_size *= GOLDENISH_RATIO;
       lines = resize(lines, lines_size * sizeof(char*));
     }
   }
 
   if (p > line_start) {
-    lines[count++] = line_start;
-    max_line = max(max_line, u8strlen(line_start));
+    add_line(lines, line_start, line_count, max_line);
   }
 
-  *longest_line = max_line;
-  *line_count = count;
   return lines;
 }
 
@@ -209,7 +210,6 @@ static void print_balloon(char** lines, unsigned int line_count, unsigned int ma
   printf(" %s \n", buffer);
 
   for (int i = 0; i < line_count; i++) {
-    const char* line = lines[i];
     const char* surrounds = SURROUNDS[0];
 
     if (line_count == 1) {
@@ -220,7 +220,7 @@ static void print_balloon(char** lines, unsigned int line_count, unsigned int ma
       surrounds = SURROUNDS[3];
     }
 
-    printf("%c %-*s %c\n", surrounds[0], max_len, line, surrounds[1]);
+    printf("%c %-*s %c\n", surrounds[0], max_len, lines[i], surrounds[1]);
   }
 
   repeat(buffer, '-', max_len + PADDING);
@@ -239,7 +239,7 @@ static char* slurp()
 
   while ((c = fgetc(stdin)) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
-      buffer_len *= 2;
+      buffer_len *= GOLDENISH_RATIO;
       buffer = resize(buffer, buffer_len);
     }
 
@@ -304,8 +304,8 @@ static int parrot(unsigned int width)
     return EXIT_FAILURE;
   }
 
-  unsigned int line_count;
-  unsigned int longest_line;
+  unsigned int line_count = 0;
+  unsigned int longest_line = 0;
   char** lines = wrap_text(text, width, &line_count, &longest_line);
 
   print_balloon(lines, line_count, longest_line);
