@@ -1,3 +1,6 @@
+/* Enable glibc bsd support for arc4random */
+#define _DEFAULT_SOURCE
+
 #include <ctype.h>
 #include <getopt.h>
 #include <locale.h>
@@ -5,8 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <unistd.h>
 
 /* Pull in external getopt globals */
 extern char* optarg;
@@ -81,28 +82,17 @@ static void* resize(void* ptr, size_t size)
   return tmp;
 }
 
-static int rand_int(int max_int)
+static inline int rand_int(int max_int)
 {
-  /**
-   * Attempt to reduce modulo bias in standard C rand
-   * https://stackoverflow.com/questions/10984974/why-do-people-say-there-is-modulo-bias-when-using-a-random-number-generator
-   */
-  int r;
-  int range = RAND_MAX - (((RAND_MAX % max_int) + 1) % max_int);
-
-  do {
-    r = rand();
-  } while (r > range);
-
-  return r % max_int + 1;
+  return arc4random_uniform(max_int) + 1;
 }
 
 static unsigned int u8strlen(const char* s)
 {
   unsigned int len = 0;
 
-  for (; *s; s++) {
-    len += ((*s & 0xC0) != 0x80);
+  while (*s) {
+    len += ((*s++ & 0xC0) != 0x80);
   }
 
   return len;
@@ -237,7 +227,7 @@ static char* slurp()
   int c = 0;
   int count = 0;
 
-  while ((c = fgetc(stdin)) != EOF) {
+  while ((c = getchar()) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
       buffer_len *= GOLDENISH_RATIO;
       buffer = resize(buffer, buffer_len);
@@ -295,8 +285,6 @@ static int parrot(unsigned int width)
     fprintf(stderr, "Failed to detect color support or color support disabled\n");
     return EXIT_FAILURE;
   }
-
-  srand(time(NULL) + getpid());
 
   char* text = slurp();
 
