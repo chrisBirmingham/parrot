@@ -24,8 +24,6 @@ static const char* USAGE = "Usage: parrot [OPTION]...\n"
 "   -v  Print version and exit\n"
 "   -h  Show this message and exit\n";
 
-static const char* MEMORY_ALLOC_MSG = "Failed to allocate memory";
-
 static const int DEFAULT_WIDTH = 40;
 static const int TABSHIFT = 8;
 static const float GOLDENISH_RATIO = 1.5;
@@ -58,31 +56,29 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
+static void null_assert(void* block)
+{
+  if (block == NULL) {
+    perror("Failed to allocate memory");
+    exit(EXIT_FAILURE);
+  }
+}
+
 static void* allocate(size_t size)
 {
   void* tmp = malloc(size);
-
-  if (tmp == NULL) {
-    perror(MEMORY_ALLOC_MSG);
-    exit(EXIT_FAILURE);
-  }
-
+  null_assert(tmp);
   return tmp;
 }
 
 static void* resize(void* ptr, size_t size)
 {
   void* tmp = realloc(ptr, size);
-
-  if (tmp == NULL) {
-    perror(MEMORY_ALLOC_MSG);
-    exit(EXIT_FAILURE);
-  }
-
+  null_assert(tmp);
   return tmp;
 }
 
-static inline int rand_int(int max_int)
+static inline unsigned int rand_int(unsigned int max_int)
 {
   return arc4random_uniform(max_int) + 1;
 }
@@ -153,9 +149,9 @@ static char** wrap_text(
   return lines;
 }
 
-static int get_colour()
+static unsigned int get_colour()
 {
-  int c = 0;
+  unsigned int c = 0;
 
   do {
     c = rand_int(MAX_COLOUR_CODE);
@@ -166,8 +162,8 @@ static int get_colour()
 
 static void print_parrot()
 {
-  int c = get_colour();
-  int f = get_colour();
+  unsigned int c = get_colour();
+  unsigned int f = get_colour();
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
@@ -183,7 +179,7 @@ static void print_parrot()
   }
 }
 
-static inline void repeat(char* buf, char c, int times)
+static inline void repeat(char* buf, char c, size_t times)
 {
   if (times > 0) {
     memset(buf, c, times);
@@ -199,7 +195,7 @@ static void print_balloon(char** lines, unsigned int line_count, unsigned int ma
   repeat(buffer, '_', max_len + PADDING);
   printf(" %s \n", buffer);
 
-  for (int i = 0; i < line_count; i++) {
+  for (unsigned int i = 0; i < line_count; i++) {
     const char* surrounds = SURROUNDS[0];
 
     if (line_count == 1) {
@@ -225,7 +221,7 @@ static char* slurp()
   char* buffer = allocate(buffer_len);
 
   int c = 0;
-  int count = 0;
+  unsigned int count = 0;
 
   while ((c = getchar()) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
