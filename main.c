@@ -247,7 +247,6 @@ static char* slurp()
   }
 
   buffer[count] = '\0';
-
   return buffer;
 }
 
@@ -293,7 +292,6 @@ static int parrot(unsigned int width)
   char** lines = wrap_text(text, width, &line_count, &longest_line);
 
   print_balloon(lines, line_count, longest_line);
-
   print_parrot();
 
   free(lines);
@@ -306,12 +304,7 @@ static int int_input(const char* in)
 {
   char* err;
   unsigned long int out = strtoul(in, &err, 10);
-
-  if (*err != '\0') {
-    return -1;
-  }
-
-  return out;
+  return (*err != '\0') ? -1 : out;
 }
 
 int main(int argc, char** argv)
@@ -321,11 +314,12 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
+  const char* optstr = "vhw:";
   int width = DEFAULT_WIDTH;
   int opt;
-
   opterr = 0; /* Disable getopts default error to stderr */
-  while ((opt = getopt(argc, argv, "vhw:")) != -1) {
+
+  while ((opt = getopt(argc, argv, optstr)) != -1) {
     switch (opt) {
       case 'h':
         printf("%s", USAGE);
@@ -334,14 +328,13 @@ int main(int argc, char** argv)
         printf("%s", VERSION);
         return EXIT_SUCCESS;
       case 'w':
-        width = int_input(optarg);
-        if (width < 0) {
+        if ((width = int_input(optarg)) <= 0) {
           fprintf(stderr, "parrot: Invalid width provided (%s)\n", optarg);
           return EXIT_FAILURE;
         }
         break;
       case '?':
-        if (optopt == 'w') {
+        if (strchr(optstr, optopt)) {
           fprintf(stderr, "parrot: Option -%c requires an argument\n", optopt);
         } else {
           fprintf(stderr, "parrot: Unknown option -%c\n", optopt);
