@@ -2,7 +2,7 @@
 
 PROG=parrot
 CC?=gcc
-CFLAGS?=-O2 -std=c11 -Wall -DGIT_DESC=\"$(shell git describe --tags --always --dirty)\"
+CFLAGS?=-O2 -std=c11 -Wall -DVERSION=\"$(shell git describe --tags --always --dirty)\"
 PREFIX?=/usr/local
 BINDIR=$(PREFIX)/bin
 MANDIR=$(PREFIX)/share/man/man1/

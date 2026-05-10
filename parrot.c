@@ -16,8 +16,6 @@ extern int optind;
 extern int optopt;
 extern int opterr;
 
-static const char* VERSION = "1.0.0";
-
 static const char* USAGE = "Usage: parrot [OPTION]...\n"
 "Repeats whatever you tell it.\n"
 "\n"
@@ -300,7 +298,7 @@ int main(int argc, char** argv)
         printf("%s", USAGE);
         return EXIT_SUCCESS;
       case 'v':
-        printf("%s %s\n", VERSION, GIT_DESC);
+        printf("%s\n", VERSION);
         return EXIT_SUCCESS;
       case 'w':
         if ((width = int_input(optarg)) <= 0) {
