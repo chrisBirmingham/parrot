@@ -6,6 +6,7 @@
 #include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -15,7 +16,7 @@ extern int optind;
 extern int optopt;
 extern int opterr;
 
-static const char* VERSION = "1.0.0\n";
+static const char* VERSION = "1.0.0";
 
 static const char* USAGE = "Usage: parrot [OPTION]...\n"
 "Repeats whatever you tell it.\n"
@@ -78,14 +79,14 @@ static void* resize(void* ptr, size_t size)
   return tmp;
 }
 
-static inline unsigned int rand_int(unsigned int max_int)
+static inline uint32_t rand_int(uint32_t max_int)
 {
   return arc4random_uniform(max_int) + 1;
 }
 
-static unsigned int u8strlen(const char* s)
+static uint32_t u8strlen(const char* s)
 {
-  unsigned int len = 0;
+  uint32_t len = 0;
 
   while (*s) {
     len += ((*s++ & 0xC0) != 0x80);
@@ -94,27 +95,19 @@ static unsigned int u8strlen(const char* s)
   return len;
 }
 
-static void add_line(
-  char** lines,
-  char* line,
-  unsigned int* restrict index,
-  unsigned int* restrict max
-) {
+static void add_line(char** lines, char* line, uint32_t* restrict index, uint32_t* restrict max)
+{
   lines[(*index)++] = line;
 
-  unsigned int len = u8strlen(line);
+  uint32_t len = u8strlen(line);
 
   if (len > *max) {
     *max = len;
   }
 }
 
-static char** wrap_text(
-  char* str,
-  unsigned int width,
-  unsigned int* restrict line_count,
-  unsigned int* restrict max_line
-) {
+static char** wrap_text(char* str, unsigned int width, uint32_t* restrict line_count, uint32_t* restrict max_line)
+{
   char* last_space = NULL;
   char* line_start = str;
   char* p;
@@ -149,9 +142,9 @@ static char** wrap_text(
   return lines;
 }
 
-static unsigned int get_colour()
+static uint32_t get_colour()
 {
-  unsigned int c = 0;
+  uint32_t c = 0;
 
   do {
     c = rand_int(MAX_COLOUR_CODE);
@@ -162,8 +155,8 @@ static unsigned int get_colour()
 
 static void print_parrot()
 {
-  unsigned int c = get_colour();
-  unsigned int f = get_colour();
+  uint32_t c = get_colour();
+  uint32_t f = get_colour();
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
@@ -188,7 +181,7 @@ static inline void repeat(char* buf, char c, size_t times)
   buf[times] = '\0';
 }
 
-static void print_balloon(char** lines, unsigned int line_count, unsigned int max_len)
+static void print_balloon(char** lines, uint32_t line_count, uint32_t max_len)
 {
   char* buffer = allocate(max_len + PADDING + 1);
 
@@ -221,7 +214,7 @@ static char* slurp()
   char* buffer = allocate(buffer_len);
 
   int c = 0;
-  unsigned int count = 0;
+  uint32_t count = 0;
 
   while ((c = getchar()) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
@@ -250,33 +243,15 @@ static char* slurp()
   return buffer;
 }
 
-static int detect_colour_support()
+static inline bool detect_no_colour()
 {
   const char* no_colour = getenv("NO_COLOR");
-
-  if (no_colour != NULL && no_colour[0] != '\0') {
-    return -1;
-  }
-
-  const char* colour_term = getenv("COLORTERM");
-
-  if (colour_term != NULL &&
-    (strcmp(colour_term, "truecolor") == 0 || strcmp(colour_term, "24bit") == 0)) {
-      return 0;
-  }
-
-  const char* term = getenv("TERM");
-
-  if (term == NULL || strcmp(term, "dumb") == 0) {
-    return -1;
-  }
-
-  return (strstr(term, "-256color") != NULL || strstr(term, "-truecolor") != NULL);
+  return (no_colour != NULL && no_colour[0] != '\0');
 }
 
-static int parrot(unsigned int width)
+static int parrot(uint32_t width)
 {
-  if (detect_colour_support() < 0) {
+  if (detect_no_colour()) {
     fprintf(stderr, "Failed to detect color support or color support disabled\n");
     return EXIT_FAILURE;
   }
@@ -287,8 +262,8 @@ static int parrot(unsigned int width)
     return EXIT_FAILURE;
   }
 
-  unsigned int line_count = 0;
-  unsigned int longest_line = 0;
+  uint32_t line_count = 0;
+  uint32_t longest_line = 0;
   char** lines = wrap_text(text, width, &line_count, &longest_line);
 
   print_balloon(lines, line_count, longest_line);
@@ -300,7 +275,7 @@ static int parrot(unsigned int width)
   return EXIT_SUCCESS; 
 }
 
-static int int_input(const char* in)
+static inline int int_input(const char* in)
 {
   char* err;
   unsigned long int out = strtoul(in, &err, 10);
@@ -325,7 +300,7 @@ int main(int argc, char** argv)
         printf("%s", USAGE);
         return EXIT_SUCCESS;
       case 'v':
-        printf("%s", VERSION);
+        printf("%s %s\n", VERSION, GIT_DESC);
         return EXIT_SUCCESS;
       case 'w':
         if ((width = int_input(optarg)) <= 0) {

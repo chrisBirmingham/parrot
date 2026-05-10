@@ -20,12 +20,6 @@ Prints version information
 .TP
 .BR NO_COLOR
 If defined, causes the program to quit with an error exit code as colour support is required.
-.TP
-.BR COLORTERM
-If defined, this value is checked to see if terminal colour support is enabled. Parrots check succeeds if the variable has either the values \fBtruecolor\fP or \fB24bit\fP
-.TP
-.BR TERM
-Secondary variable checked to see if terminal colour support is enabled. If the value contains the string \fB\-truecolor\fP or \fB\-256color\fP, the check succeeds. If the value is set to \fBdumb\fP, parrot quits with an error exit code.
 .SH EXAMPLES
 .TP
 Usually you'll call parrot, passing in input from a program which generates text, such as \fBfortune\fP
@@ -34,7 +28,7 @@ Usually you'll call parrot, passing in input from a program which generates text
 fortune | parrot
 .RE
 .TP
-For input that would be wrapped to early, you can speficy the width of the balloon like so.
+For input that would be wrapped to early, you can specify the width of the balloon like so.
 .PP
 .RS
 figlet "Hello world" | parrot -w 60
