@@ -55,7 +55,7 @@ static const char* PARROT =
 "        \x1b[48;5;16m \x1b[48;5;Cm     \x1b[48;5;16m\x1b[38;5;Fm▄▄▄▄\x1b[48;5;Cm                  \x1b[48;5;232m▄\x1b[48;5;16m▄ \x1b[49m\n"
 "        \x1b[38;5;16m▀\x1b[38;5;232m▀▀▀\x1b[38;5;16m▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀\x1b[39m\n";
 
-static void null_assert(void* block)
+static inline void null_assert(void* block)
 {
   if (block == NULL) {
     perror("Failed to allocate memory");
@@ -63,14 +63,14 @@ static void null_assert(void* block)
   }
 }
 
-static void* allocate(size_t size)
+static inline void* allocate(size_t size)
 {
   void* tmp = malloc(size);
   null_assert(tmp);
   return tmp;
 }
 
-static void* resize(void* ptr, size_t size)
+static inline void* resize(void* ptr, size_t size)
 {
   void* tmp = realloc(ptr, size);
   null_assert(tmp);
@@ -93,9 +93,9 @@ static uint32_t u8strlen(const char* s)
   return len;
 }
 
-static void add_line(char** lines, char* line, uint32_t* restrict index, uint32_t* restrict max)
+static void add_line(char** lines, char* line, uint32_t index, uint32_t* max)
 {
-  lines[(*index)++] = line;
+  lines[index] = line;
 
   uint32_t len = u8strlen(line);
 
@@ -104,7 +104,7 @@ static void add_line(char** lines, char* line, uint32_t* restrict index, uint32_
   }
 }
 
-static char** wrap_text(char* str, unsigned int width, uint32_t* restrict line_count, uint32_t* restrict max_line)
+static char** wrap_text(char* str, uint32_t width, uint32_t* restrict line_count, uint32_t* restrict max_line)
 {
   char* last_space = NULL;
   char* line_start = str;
@@ -122,7 +122,7 @@ static char** wrap_text(char* str, unsigned int width, uint32_t* restrict line_c
     if (is_newline || (p - line_start > width && last_space)) {
       char* line_end = is_newline ? p : last_space;
       *line_end = '\0';
-      add_line(lines, line_start, line_count, max_line);
+      add_line(lines, line_start, (*line_count)++, max_line);
       line_start = line_end + 1;
       last_space = NULL;
     }
@@ -134,7 +134,7 @@ static char** wrap_text(char* str, unsigned int width, uint32_t* restrict line_c
   }
 
   if (p > line_start) {
-    add_line(lines, line_start, line_count, max_line);
+    add_line(lines, line_start, (*line_count)++, max_line);
   }
 
   return lines;
@@ -186,7 +186,7 @@ static void print_balloon(char** lines, uint32_t line_count, uint32_t max_len)
   repeat(buffer, '_', max_len + PADDING);
   printf(" %s \n", buffer);
 
-  for (unsigned int i = 0; i < line_count; i++) {
+  for (uint32_t i = 0; i < line_count; i++) {
     const char* surrounds = SURROUNDS[0];
 
     if (line_count == 1) {
