@@ -4,7 +4,7 @@ A program that parrots back whatever you tell it.
 
 Parrot is an imperfect implementation of the cowsay program written in C which prints parrots rather than cows. Parrot reads from stdin and echos the result back to the termainal while wrapped inside a text bubble. A randomly coloured parrot is also printed along with the text.
 
-The parrot in question is Sirocco, a member of the critically endangered Kākāpō species that inspired the [The Cult of the Party Parrot](https://cultofthepartyparrot.com/) after he tried to [mate with zoologist Mark Carwardine](https://www.youtube.com/watch?v=9T1vfsHYiKY)
+The parrot in question is Sirocco, a member of the critically endangered Kākāpō species that inspired the [The Cult of the Party Parrot][1] after he tried to [mate with zoologist Mark Carwardine][2]
 
 Parrot accepts one option, `-w`, which configures the width of the text balloon. This is more a suggestion as line breaks occur at spaces and don't
 happen within the middle of words.
@@ -14,7 +14,7 @@ happen within the middle of words.
 ## Requirements
 
 * (gnu) make
-* A version of gcc or clang that supports c11
+* A version of gcc or clang that supports c2x
 * A (*)nix based operating system
 * glibc >= 2.36 or libbsd on non bsd systems for arc4random support
 
@@ -38,7 +38,13 @@ make install PREFIX=~/.local
 
 ## Inspiration/Attributions
 
-* [parrotsay](https://github.com/matheuss/parrotsay-api) The original inspiration for my project and where I found the parrot terminal art.
-* [Cowsay](https://github.com/tnalpgge/rank-amateur-cowsay)
+* [parrotsay][3] The original inspiration for my project and where I found the parrot terminal art.
+* [Cowsay][4]
 * Sirocco and the Cult of the Party Parrot
-* The C implementation of wordwrap found [here](https://rosettacode.org/wiki/Word_wrap) which started as the springboard for my implementation.
+* The C implementation of wordwrap found [here][5] which started as the springboard for my implementation.
+
+[1]: https://cultofthepartyparrot.com/
+[2]: https://www.youtube.com/watch?v=9T1vfsHYiKY
+[3]: https://github.com/matheuss/parrotsay-api
+[4]: https://github.com/tnalpgge/rank-amateur-cowsay
+[5]: https://rosettacode.org/wiki/Word_wrap

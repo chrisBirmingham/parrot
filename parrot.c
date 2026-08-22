@@ -4,9 +4,7 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <locale.h>
-#include <stdbool.h>
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -33,6 +31,12 @@ static const char SURROUNDS[][2] = {
   {'/', '\\'},
   {'\\', '/'}
 };
+
+typedef struct {
+  char** lines;
+  unsigned int max;
+  unsigned int count;
+} Buffer;
 
 static const int PADDING = 2;
 static const int MAX_COLOUR_CODE = 255;
@@ -77,14 +81,14 @@ static inline void* resize(void* ptr, size_t size)
   return tmp;
 }
 
-static inline uint32_t rand_int(uint32_t max_int)
+static inline int rand_int(int max_int)
 {
   return arc4random_uniform(max_int) + 1;
 }
 
-static uint32_t u8strlen(const char* s)
+static unsigned int u8strlen(const char* s)
 {
-  uint32_t len = 0;
+  unsigned int len = 0;
 
   while (*s) {
     len += ((*s++ & 0xC0) != 0x80);
@@ -93,25 +97,25 @@ static uint32_t u8strlen(const char* s)
   return len;
 }
 
-static void add_line(char** lines, char* line, uint32_t index, uint32_t* max)
+static void buffer_add_line(Buffer* buf, char* line)
 {
-  lines[index] = line;
+  buf->lines[buf->count++] = line;
 
-  uint32_t len = u8strlen(line);
+  unsigned int len = u8strlen(line);
 
-  if (len > *max) {
-    *max = len;
+  if (len > buf->max) {
+    buf->max = len;
   }
 }
 
-static char** wrap_text(char* str, uint32_t width, uint32_t* restrict line_count, uint32_t* restrict max_line)
+static void wrap_text(Buffer* buf, char* str, unsigned int width)
 {
   char* last_space = NULL;
   char* line_start = str;
   char* p;
 
   size_t lines_size = 10;
-  char** lines = allocate(lines_size * sizeof(char*));
+  buf->lines = allocate(lines_size * sizeof(char*));
 
   for (p = str; *p; p++) {
     if (*p == ' ') {
@@ -122,27 +126,25 @@ static char** wrap_text(char* str, uint32_t width, uint32_t* restrict line_count
     if (is_newline || (p - line_start > width && last_space)) {
       char* line_end = is_newline ? p : last_space;
       *line_end = '\0';
-      add_line(lines, line_start, (*line_count)++, max_line);
+      buffer_add_line(buf, line_start);
       line_start = line_end + 1;
       last_space = NULL;
     }
 
-    if (*line_count == lines_size) {
+    if (buf->count == lines_size) {
       lines_size *= GOLDENISH_RATIO;
-      lines = resize(lines, lines_size * sizeof(char*));
+      buf->lines = resize(buf->lines, lines_size * sizeof(char*));
     }
   }
 
   if (p > line_start) {
-    add_line(lines, line_start, (*line_count)++, max_line);
+    buffer_add_line(buf, line_start);
   }
-
-  return lines;
 }
 
-static uint32_t get_colour()
+static unsigned short get_colour()
 {
-  uint32_t c = 0;
+  unsigned short c = 0;
 
   do {
     c = rand_int(MAX_COLOUR_CODE);
@@ -153,8 +155,8 @@ static uint32_t get_colour()
 
 static void print_parrot()
 {
-  uint32_t c = get_colour();
-  uint32_t f = get_colour();
+  unsigned short c = get_colour();
+  unsigned short f = get_colour();
 
   for (const char* s = PARROT; *s; s++) {
     switch (*s) {
@@ -179,28 +181,28 @@ static inline void repeat(char* buf, char c, size_t times)
   buf[times] = '\0';
 }
 
-static void print_balloon(char** lines, uint32_t line_count, uint32_t max_len)
+static void print_balloon(Buffer* buf)
 {
-  char* buffer = allocate(max_len + PADDING + 1);
+  char* buffer = allocate(buf->max + PADDING + 1);
 
-  repeat(buffer, '_', max_len + PADDING);
+  repeat(buffer, '_', buf->max + PADDING);
   printf(" %s \n", buffer);
 
-  for (uint32_t i = 0; i < line_count; i++) {
+  for (unsigned int i = 0; i < buf->count; i++) {
     const char* surrounds = SURROUNDS[0];
 
-    if (line_count == 1) {
+    if (buf->count == 1) {
       surrounds = SURROUNDS[1];
     } else if (i == 0) {
       surrounds = SURROUNDS[2];
-    } else if (i == line_count - 1) {
+    } else if (i == buf->count - 1) {
       surrounds = SURROUNDS[3];
     }
 
-    printf("%c %-*s %c\n", surrounds[0], max_len, lines[i], surrounds[1]);
+    printf("%c %-*s %c\n", surrounds[0], buf->max, buf->lines[i], surrounds[1]);
   }
 
-  repeat(buffer, '-', max_len + PADDING);
+  repeat(buffer, '-', buf->max + PADDING);
   printf(" %s \n", buffer);
 
   free(buffer);
@@ -212,7 +214,7 @@ static char* slurp()
   char* buffer = allocate(buffer_len);
 
   int c = 0;
-  uint32_t count = 0;
+  unsigned int count = 0;
 
   while ((c = getchar()) != EOF) {
     if ((count + TABSHIFT) >= buffer_len) {
@@ -247,7 +249,7 @@ static inline bool detect_no_colour()
   return (no_colour != NULL && no_colour[0] != '\0');
 }
 
-static int parrot(uint32_t width)
+static int parrot(unsigned int width)
 {
   if (detect_no_colour()) {
     fprintf(stderr, "Failed to detect color support or color support disabled\n");
@@ -260,14 +262,13 @@ static int parrot(uint32_t width)
     return EXIT_FAILURE;
   }
 
-  uint32_t line_count = 0;
-  uint32_t longest_line = 0;
-  char** lines = wrap_text(text, width, &line_count, &longest_line);
+  Buffer buf = {NULL, 0, 0};
+  wrap_text(&buf, text, width);
 
-  print_balloon(lines, line_count, longest_line);
+  print_balloon(&buf);
   print_parrot();
 
-  free(lines);
+  free(buf.lines);
   free(text);
 
   return EXIT_SUCCESS; 
@@ -276,7 +277,7 @@ static int parrot(uint32_t width)
 static inline int int_input(const char* in)
 {
   char* err;
-  unsigned long int out = strtoul(in, &err, 10);
+  int out = strtol(in, &err, 10);
   return (*err != '\0') ? -1 : out;
 }
 
