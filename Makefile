@@ -17,11 +17,9 @@ clean:
 	rm -f $(PROG)
 
 install:
-	mkdir -p $(MANDIR)
-	cp parrot.1 $(MANDIR)
-	mkdir -p $(BINDIR)
-	cp $(PROG) $(BINDIR)
+	install -D -C $(PROG).1 $(MANDIR)
+	install -D -C $(PROG) $(BINDIR)
 
 uninstall:
-	rm -f $(MANDIR)/parrot.1
+	rm -f $(MANDIR)/$(PROG).1
 	rm -f $(BINDIR)/$(PROG)
